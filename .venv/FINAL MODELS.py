@@ -41,7 +41,8 @@ test_iter=int(input())
 print('Задать максимальную длину белка?')
 maximum_sequence_of_all=0
 if str(input()) == 'yes':
-    print('Введите максимальную длину белка = 3900, это замедляет обучение, но вы никогда не получите ошибку размерностей векторов')
+    print('Введите максимальную длину белка = 3907, это замедляет обучение, но вы никогда не получите ошибку размерностей векторов\n'
+          'максимальная длина комплекса = 3900, +5 начальных признаков места мутации, +2 chain id (который ни на что особо не влияет)')
     Ubermaximum_length=int(input())
     maximum_sequence_of_all=Ubermaximum_length
 
@@ -140,7 +141,7 @@ def BINARY_MODEL():
     testcodevect=np.array(testcodevect).astype('float64')
     print('testcode shape', testcodevect.shape)
     y_pred = np.array([np.sign(np.dot(w.astype('float64'), x)) for x in testcodevect])    ### СКАЛЯРНОЕ ПРОИЗВДЕНИЕ КАЖДОГО ВЕКТОРА СИКВЕНСА НА ВЕКТОР ВЕСОВ
-    y_pred=y_pred.ravel()
+    y_pred=y_pred.astype('int32').ravel()
     print('ПРЕДСКАЗАНИЕ МОДЕЛИ', y_pred)
     print('accuracy',
           [1 == x * y for x, y in zip(y_pred.reshape(len(y_pred)), np.array(testclasses).reshape(len(testclasses)))].count(np.True_),
@@ -158,7 +159,7 @@ def SVM_MODEL():
     filename = 'svm_model.joblib'
     joblib.dump(model, filename)              ### СОХРАНЕНИЕ ОБУЧЕННОЙ МОДЕЛИ
     y_pred = model.predict(testcode)              ### ВАЛИДАЦИЯ
-    print(np.array(testclasses).ravel())
+    print(np.array(testclasses).astype('int32').ravel())
     print('ПРЕДСКАЗАНИЕ МОДЕЛИ', y_pred)
     print('accuracy',
           [1 == x * y for x, y in zip(y_pred.reshape(len(y_pred)), np.array(testclasses).reshape(len(testclasses)))].count(np.True_),
@@ -256,7 +257,6 @@ def structures_extractor(pdbset_dir, data_file_path, upper_row, lower_row, how_m
             a.append((parser.get_structure(str(i), pdbset_dir + str(i) + '.pdb')))
         return a
 
-
     def SequenceReader(structures_of_protein):
         b = []
         for structure in structures_of_protein:
@@ -308,7 +308,7 @@ def structures_extractor(pdbset_dir, data_file_path, upper_row, lower_row, how_m
                 parsed_structures_row_ids.append(upper_row+e)                                ############## ПАРАМЕТР ВАЖНЫЙ КОТОРЫЙ ЗАПИСЫВАЕТ ИНДЕКСЫ БЕЛКОВ ПО СТРОКАМ
                 for model in structure:
                     for chain in model:
-                        #chainsindices.append[chain, ]
+                        a.append('chain_id:'+chain.id)
                         for residue in chain:
                             a.append(residue.get_resname())           ### ТЕПЕРЬ ПО ВСЕМ НОРМАЛЬНЫМ СТРУКТУРАМ БЕЛКОВ И НАЙДЕННОМУ МАКСИМУМУ ДЛИНЫ
                 c=len(a)                                              ### ДЕЛАЕМ ВЕКТОР С СИКВЕНСАМИ, ГДЕ ХВОСТ БЕЛКА ЗАПОЛНЕН АЛАНИНОМ ДЛЯ СООТВЕТСТВИЯ
@@ -364,9 +364,11 @@ def change_seq(data_file_path, protein_vector, upper_row, lower_row):
         mutations.append(data.iloc[q, [2]])              ### ВЫГРУЗКА ДАННЫХ О МУТАЦИИ
     i=0
     for x in (np.append([], mutations[0:len(mutations)], axis=None)):                     ###УЧЕСТЬ МНОЖЕСТВНЕННЫЕ МУТАЦИИ LI39A,EI41L  RI39D,EI41L
-        try:                                                                                  ###СДЕЛАНО
-            protein_vector[int(i), int(x[2:len(x) - 1])] = oneletterresidues[x[len(x) - 1]]   ###  ЕСЛИ НЕ ПОЛУЧАЕТСЯ СРАЗУ
-        except(ValueError):
+        try:
+            #check=(str(protein_vector[int(i), int((protein_vector[i].tolist()).index(str('chain_id:' + x[1])) + int(x[2:len(x) - 1]))])==oneletterresidues[x[0]])                                                                                  ###СДЕЛАНО
+            protein_vector[int(i), int((protein_vector[i].tolist()).index(str('chain_id:'+x[1]))+int(x[2:len(x) - 1]))] = oneletterresidues[x[len(x) - 1]]   ###  ЕСЛИ НЕ ПОЛУЧАЕТСЯ СРАЗУ
+            #print(check)         ### В НАЧАЛЕ ЦЕПИ ЕСТЬ CHAIN_ID: ПО КОТОРОМУ МЫ НАХОДИМ НАЧАЛО ЦЕПИ И ЕЕ НАЗВАНИЕ
+        except(ValueError):      ### МУТАЦИЯ СОВЕРШАЕТСЯ ПО ИНДЕКСУ CHAIN_ID: + НОМЕР ОСТАТКА
             a = list(str(x).split(sep=','))    #####3 a = ['RA156K,DA160H,IA168V,QA170K']     ### ТО СОЗДАЕМ СПИСОК
             #print(a)                     ##### c = 'RA156K'
             #print("x", x)                                                                     ### ПРОВОДИМ ЗАМЕНУ ДЛЯ КАЖДОЙ МУТАЦИИ ИЗ СПИСКА
@@ -375,7 +377,8 @@ def change_seq(data_file_path, protein_vector, upper_row, lower_row):
                     #count=[]
                     #if x != 'HOH':
                         #count.append
-                protein_vector[int(i), int(c[2:(len(c) - 1)])] = oneletterresidues[c[len(c) - 1]]        ### ЗАМЕНА АМИНОКИСЛОТЫ НА МЕСТЕ МУТАЦИИ
+                protein_vector[int(i), int((protein_vector[i].tolist()).index(str('chain_id:'+c[1]))+int(c[2:len(c) - 1]))] = oneletterresidues[c[len(c) - 1]]        ### ЗАМЕНА АМИНОКИСЛОТЫ НА МЕСТЕ МУТАЦИИ
+        #protein_vector[i]
         i += 1
     return protein_vector
 
@@ -425,9 +428,11 @@ def AddOtherAttributesToVector(code_vector, parsed_structures_row_ids, upper_row
 
 if modelle != 'NeuralNetwork()':
     if modelle != 'SGDClassifier()':
-        protein_vector=np.array(structures_extractor(pdbset_dir, data_file_path, upper_row, lower_row, how_many_prot_for_1iter))
-        print(protein_vector[1].tolist())
-        print("форма вектора белков", protein_vector.shape)
+        protein_vector=structures_extractor(pdbset_dir, data_file_path, upper_row, lower_row, how_many_prot_for_1iter)
+        print(protein_vector)
+        protein_vector=np.array(protein_vector)
+        #print('chain',(protein_vector[0].tolist()).index('chain_id:E'))
+        #print("форма вектора белков", protein_vector.shape)
         protein_vector=change_seq(data_file_path, protein_vector, upper_row, lower_row)
         code_vector=SequenceEncoder(protein_vector)
         code_vector=AddOtherAttributesToVector(code_vector, parsed_structures_row_ids, upper_row, lower_row)
@@ -459,7 +464,7 @@ def SGDClassifier_model(code_vector, class_vector, testcode, testclasses):
     global maximum_sequence_of_all
     print('До какого белка делаем выборку?')
     x_train_end=int(input())
-    maximum_sequence_of_all = Ubermaximum_length
+    maximum_sequence_of_all = Ubermaximum_length + 5
     model = skl.linear_model.SGDClassifier(loss='hinge')  # Hinge-loss ДАЕТ МОЕЛИ ПОВЕДЕНИЕ КАК У SVM
     print('Обучить модель?')
     if str(input()) == 'yes':
@@ -488,7 +493,7 @@ def SGDClassifier_model(code_vector, class_vector, testcode, testclasses):
         model_preset='sgd_svm_model.joblib'
         loaded_model=joblib.load(model_preset)
         y_pred = loaded_model.predict(np.array(testcode, dtype=np.float64))
-        print(testclasses)
+        print(np.array(testclasses).astype('int32').ravel())
         print('ПРЕДСКАЗАНИЕ МОДЕЛИ', y_pred)
 
         print('accuracy',
