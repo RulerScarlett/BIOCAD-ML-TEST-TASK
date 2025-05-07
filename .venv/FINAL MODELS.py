@@ -1,3 +1,13 @@
+
+'''ОЧЕНЬ ОЧЕНЬ ВАЖНО
+ЗНАЧЕНИЯ НАЧАЛА И КОНЦА ВЫБОРКИ ДОЛЖНЫ ОТЛИЧАТЬСЯ НА ШАГ ВЫБОРКИ
+ТО ЕСТЬ ПЕРВЫЙ 0 ПОСЛЕДНИЙ 128 И ШАГ 128
+ИЛИ НАЧАЛО 0 КОНЕЦ 1000 ШАГ 128
+ТО ЕСТЬ ВСЯ ВЫБОРКА ДОЛЖНА БЫТЬ БОЛЬШЕ ЧЕМ ШАГ'''
+
+
+
+
 import os
 os.makedirs("saved_models", exist_ok=True)
 
@@ -24,7 +34,7 @@ except(FileNotFoundError):
         f.write(str(','))
         f.write(str(data_file_path))
 
-
+print('ОЧЕНЬ ОЧЕНЬ ВАЖНО ЗНАЧЕНИЯ НАЧАЛА И КОНЦА ВЫБОРКИ ДОЛЖНЫ ОТЛИЧАТЬСЯ НА ШАГ ВЫБОРКИ\nТО ЕСТЬ ПЕРВЫЙ 0 ПОСЛЕДНИЙ 128 И ШАГ 128 ИЛИ НАЧАЛО 0 КОНЕЦ 1000 ШАГ 128\nТО ЕСТЬ ВСЯ ВЫБОРКА ДОЛЖНА БЫТЬ БОЛЬШЕ ЧЕМ ШАГ')
 print('Выберите модель: BINARY_MODEL(), SVM_MODEL(), SVM_MODEL_LOAD(), SGDClassifier_model(), NeuralNetwork()')
 modelle=str(input())
 
@@ -200,6 +210,7 @@ def max_sequence(sequences_pylist):
 checklength=[]
 structures_of_protein=0
 parsed_structures_row_ids=0
+parser = PDB.PDBParser(QUIET=True)
 def structures_extractor(pdbset_dir, data_file_path, upper_row, lower_row, how_many_prot_for_1iter):
     global maximum_sequence_of_all
     print(maximum_sequence_of_all)
@@ -252,6 +263,7 @@ def structures_extractor(pdbset_dir, data_file_path, upper_row, lower_row, how_m
             return (max(a))
         leng.append(max_sequence(sequences_pylist))   ### СПИСОК МАКСИМАЛЬНЫХ СИКВЕНСОВ ПО ВСЕМ ИТЕРАЦИЯМ ПАРСЕРА (how many prot for 1 iter)
     def get_structure(pdbset_dir, files):
+        parser = PDB.PDBParser(QUIET=True)
         a = []
         for i in files:
             a.append((parser.get_structure(str(i), pdbset_dir + str(i) + '.pdb')))
@@ -281,7 +293,7 @@ def structures_extractor(pdbset_dir, data_file_path, upper_row, lower_row, how_m
     if max(checklength) < max(leng):     ### ФУНКЦИЯ КОТОРАЯ ОБНОВЛЯЕТ ГЛОБАЛЬНЫЙ МАКСИМУМ СИКВЕНСА ЕСЛИ НАХОДИТ НОВЫЙ МАКСИМУМ
         maximum_sequence_of_all=max(leng)
     parser = PDB.PDBParser(QUIET=True)
-
+    print(structures_of_protein)
     def VectorMaker(structures_of_protein, upper_row, lower_row):
             data = pd.read_csv(data_file_path, sep=';')
             affinity_mut = (np.array(data.iloc[upper_row:lower_row, [7]]))
@@ -464,7 +476,7 @@ def SGDClassifier_model(code_vector, class_vector, testcode, testclasses):
     global maximum_sequence_of_all
     print('До какого белка делаем выборку?')
     x_train_end=int(input())
-    maximum_sequence_of_all = Ubermaximum_length + 5
+    maximum_sequence_of_all = Ubermaximum_length
     model = skl.linear_model.SGDClassifier(loss='hinge')  # Hinge-loss ДАЕТ МОЕЛИ ПОВЕДЕНИЕ КАК У SVM
     print('Обучить модель?')
     if str(input()) == 'yes':
